@@ -1,0 +1,13 @@
+## Interface: 11200
+## Title: WowLuaVanilla
+## Version: v40300-1.0.2-71bf340 
+## Author: Cladhaire, Ike
+## Notes: Interactive Lua interpreter and scratchpad
+## SavedVariables: WowLua_DB
+
+Localization.enUS.lua
+
+WowLua.lua
+FAIAP.lua
+WowLua.xml
+WowLua_Config.lua
