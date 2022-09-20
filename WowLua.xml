@@ -481,7 +481,7 @@
 				<!-- Basically copy/pasted from MacroFrame -->
 				<Scripts>
 					<OnVerticalScroll>
-						WowLuaFrameLineNumScrollFrame:SetVerticalScroll(offset)
+						WowLuaFrameLineNumScrollFrame:SetVerticalScroll(arg1)
 						WowLua:OnVerticalScroll(this);
 					</OnVerticalScroll>
 					<OnShow>
@@ -515,8 +515,10 @@
                                 this.GetCursorPosition = function(this)
                                     return 0
                                 end
-								WowLua.indent.enable(this, nil, 3)
+								WowLua.indent.enable(WowLuaFrameEditBox, nil, 3)
 								WowLua.unlockedTextChanged = this:GetScript("OnTextChanged")
+								this.cursorOffset = 0
+								this.cursorHeight = 0
 							</OnLoad>
 							<OnEscapePressed>
 								this:ClearFocus();
@@ -524,17 +526,16 @@
 							<OnTextChanged>
 								WowLua:SetTitle()
 								WowLua.highlightNum = nil
+								this:GetParent():UpdateScrollChildRect()
 							</OnTextChanged>
 							<OnCursorChanged>
-                                --todo
-								WowLua.lastCursorPos = WowLua.cursorPos
-								WowLua.cursorPos = this:GetCursorPosition()
-								ScrollingEdit_OnCursorChanged(this,x,y,w,h)
+								this.cursorOffset = arg2
+								this.cursorHeight = arg4
 								WowLua:UpdateLineNums()
-								WowLuaFrameEditScrollFrameScrollBar:SetValue(WowLuaFrameEditScrollFrame:GetVerticalScroll())
 							</OnCursorChanged>
 							<OnUpdate>
-								ScrollingEdit_OnUpdate(this, elapsed, WowLuaFrameEditScrollFrame)
+								ScrollingEdit_OnUpdate()
+								
 							</OnUpdate>
 						</Scripts>
                         <FontString inherits="WowLuaMonoFont"/>

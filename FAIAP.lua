@@ -1,29 +1,19 @@
---[[
--- For all Indents and Purposes
--- Copyright (c) 2007 Kristofer Karlsson <kristofer.karlsson@gmail.com>
---
--- Permission is hereby granted, free of charge, to any person obtaining a copy
--- of this software and associated documentation files (the "Software"), to deal
--- in the Software without restriction, including without limitation the rights
--- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
--- copies of the Software, and to permit persons to whom the Software is
--- furnished to do so, subject to the following conditions:
--- 
--- The above copyright notice and this permission notice shall be included in
--- all copies or substantial portions of the Software.
--- 
--- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
--- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
--- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
--- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
--- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
--- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
--- THE SOFTWARE.
---]]
+-- For All Indents And Purposes
+local revision = 17
+-- Maintainer: kristofer.karlsson@gmail.com
 
 -- For All Indents And Purposes -
 -- a indentation + syntax highlighting library
 -- All valid lua code should be processed correctly.
+
+-- Usage (for developers)
+--------
+-- Variant 1: - non embedded
+-- 1) Add ForAllIndentsAndPurposes to your dependencies (or optional dependencies)
+
+-- Variant 2: - embedded
+-- 1.a) Copy indent.lua to your addon directory
+-- 1.b) Put indent.lua first in your list of files in the TOC
 
 -- For both variants:
 -- 2) hook the editboxes that you want to have indentation like this:
@@ -382,7 +372,7 @@ end
 -- OUTPUT
 -- 1: token type
 -- 2: position after the last character of the token
-function lib.nextToken(text, pos)
+   function nextToken(text, pos)
 	local byte = stringbyte(text, pos)
 	if not byte then
 		return nil
@@ -542,7 +532,7 @@ keywords["function"] = indentRight
 
 keywords["else"] = indentBoth
 
-local tokenIndentation = {}
+   tokenIndentation = {}
 lib.tokenIndentation = tokenIndentation
 tokenIndentation[tokens.TOKEN_LEFTPAREN] = indentRight
 tokenIndentation[tokens.TOKEN_LEFTBRACKET] = indentRight
@@ -600,7 +590,7 @@ function lib.colorCodeCode(code, colorTable, caretPosition)
 		prevTokenWasColored = false
 		prevTokenWidth = 0
 		
-		local tokenType, nextPos = lib.nextToken(code, pos)
+	 local tokenType, nextPos = nextToken(code, pos)
 		
 		if not tokenType then
 			break
@@ -722,7 +712,7 @@ function lib.indentCode(code, tabWidth, colorTable, caretPosition)
 		prevTokenWasColored = false
 		prevTokenWidth = 0
 		
-		local tokenType, nextPos = lib.nextToken(code, pos)
+	 local tokenType, nextPos = nextToken(code, pos)
 		
 		if not tokenType or tokenType == tokens.TOKEN_LINEBREAK then
 			level = level + preIndent
@@ -859,6 +849,54 @@ local GetTime = GetTime
 local editboxSetText
 local editboxGetText
 
+   -- Caret code (thanks Tem!)
+   local function critical_enter(editbox)
+      local script = editbox:GetScript("OnTextSet")
+      if script then
+	 editbox:SetScript("OnTextSet", nil)
+      end
+      return script
+   end
+
+   local function critical_leave(editbox, script)
+      if script then
+	 editbox:SetScript("OnTextSet", script)
+      end
+   end
+   
+   local function setCaretPos_main(editbox, pos)
+      local text = editboxGetText(editbox)
+      
+      if stringlen(text) > 0 then
+	 editboxSetText(editbox, stringinsert(text, pos, "a"))
+	 editbox:HighlightText(pos, pos + 1)
+	 editbox:Insert("\0")
+      end
+   end
+
+   local function getCaretPos(editbox)
+      local script = critical_enter(editbox)
+      
+      local text = editboxGetText(editbox)
+      editbox:Insert("\1")
+      local pos = stringfind(editboxGetText(editbox), "\1", 1, 1)
+      editboxSetText(editbox, text)
+      
+      if pos then
+	 setCaretPos_main(editbox, pos - 1)
+      end
+      critical_leave(editbox, script)
+      
+      return (pos or 0) - 1
+   end
+
+   local function setCaretPos(editbox, pos)
+      local script = critical_enter(editbox)
+      setCaretPos_main(editbox, pos)
+      critical_leave(editbox, script, script2)
+   end
+   -- end of caret code
+
 function lib.stripWowColors(code)
 
 	-- HACK!
@@ -942,10 +980,6 @@ end
 -- returns the padded code, and true if modified, false if unmodified
 local linebreak = stringbyte("\n")
 function lib.padWithLinebreaks(code)
-	do
-		return code, false
-	end
-
 	local len = stringlen(code)
 	if stringbyte(code, len) == linebreak then
 		if stringbyte(code, len - 1) == linebreak then
@@ -974,6 +1008,7 @@ function lib.coloredGetText(editbox)
 	return editboxGetText(editbox)
 end
 
+
 function lib.colorCodeEditbox(editbox)
 	dirty[editbox] = nil
 
@@ -986,7 +1021,7 @@ function lib.colorCodeEditbox(editbox)
 		return
 	end
 	
-	local pos = 0 --todo editbox:GetCursorPosition()
+      local pos = getCaretPos(editbox)
 	
 	local code
 	code, pos = lib.stripWowColorsWithPos(orgCode, pos)
@@ -994,12 +1029,11 @@ function lib.colorCodeEditbox(editbox)
 	colorTable[0] = "|r"
 	
 	local newCode, newPos, numLines = lib.colorCodeCode(code, colorTable, pos)
-	if editbox:IsMultiLine() then
 		newCode = lib.padWithLinebreaks(newCode)
-	end
 
 	editboxStringCache[editbox] = newCode
 	if orgCode ~= newCode then
+	 local script, script2 = critical_enter(editbox)
 		decodeCache[editbox] = nil
 		local stringlenNewCode = stringlen(newCode)
 
@@ -1008,8 +1042,9 @@ function lib.colorCodeEditbox(editbox)
 			if newPos < 0 then newPos = 0 end
 			if newPos > stringlenNewCode then newPos = stringlenNewCode end
 			
-			--todo editbox:SetCursorPosition(newPos)
+	    setCaretPos(editbox, newPos)
 		end
+	 critical_leave(editbox, script, script2)
 	end
 	
 	if editboxNumLinesCache[editbox] ~= numLines then
@@ -1030,19 +1065,17 @@ function lib.indentEditbox(editbox)
 		return
 	end
 
-	local pos = 0 --editbox:GetCursorPosition()
+      local pos = getCaretPos(editbox)
 	
 	local code
 	code, pos = lib.stripWowColorsWithPos(orgCode, pos)
 
 	colorTable[0] = "|r"
 	local newCode, newPos = lib.indentCode(code, tabWidth, colorTable, pos)
-	if editbox:IsMultiLine() then 
 		newCode = lib.padWithLinebreaks(newCode)
-	end
-
 	editboxIndentCache[editbox] = newCode
 	if code ~= newCode then
+	 local script, script2 = critical_enter(editbox)
 		decodeCache[editbox] = nil
 
 		local stringlenNewCode = stringlen(newCode)
@@ -1053,8 +1086,9 @@ function lib.indentEditbox(editbox)
 			if newPos < 0 then newPos = 0 end
 			if newPos > stringlenNewCode then newPos = stringlenNewCode end
 			
-			--todo editbox:SetCursorPosition(newPos)
+	    setCaretPos(editbox, newPos)
 		end
+	 critical_leave(editbox, script, script2)
 	end
 end
 
@@ -1068,7 +1102,7 @@ local function hookHandler(editbox, handler, newFun)
 	editbox:SetScript(handler, newFun)
 end
 
-local function textChangedHook(...)
+   local function textChangedHook( ...)
     local editbox = this
 	local oldFun = editbox["faiap_old_OnTextChanged"]
 	if oldFun then
@@ -1079,8 +1113,8 @@ local function textChangedHook(...)
 	end
 end
 
-local function tabPressedHook(...)
-    local editbox = this
+   local function tabPressedHook( ...)
+	local editbox = this
 	local oldFun = editbox["faiap_old_OnTabPressed"]
 	if oldFun then
 		oldFun(editbox, unpack(arg))
@@ -1090,8 +1124,8 @@ local function tabPressedHook(...)
 	end
 end
 
-local function onUpdateHook(...)
-    local editbox = this
+   local function onUpdateHook( ...)
+	local editbox = this
 	local oldFun = editbox["faiap_old_OnUpdate"]
 	if oldFun then
 		oldFun(editbox, unpack(arg))
@@ -1106,11 +1140,7 @@ local function onUpdateHook(...)
 	end
 end
 
-local function newGetText(editbox, raw)
-	if raw then
-		return lib.decode(editboxGetText(editbox))
-	end
-
+   local function newGetText(editbox)
 	local decoded = decodeCache[editbox]
 	if not decoded then
 		decoded = lib.decode(editboxGetText(editbox))
