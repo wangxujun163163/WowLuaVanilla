@@ -7,6 +7,7 @@
 
 Localization.enUS.lua
 
+Debug.lua
 WowLua.lua
 FAIAP.lua
 WowLua.xml

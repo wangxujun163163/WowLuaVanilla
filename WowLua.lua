@@ -100,16 +100,18 @@ function WowLua:SelectPage(id)
 end
 
 local function wowpad_print(...)
-	local out = ""
-	for i=1,table.getn(arg) do
-		-- Comma seperate values
-		if i > 1 then
-			out = out .. ", "
-		end
+	-- local out = ""
+	-- for i=1,table.getn(arg) do
+		-- -- Comma seperate values
+		-- if i > 1 then
+			-- out = out .. ", "
+		-- end
 
-		out = out .. tostring(arg[i])
-	end
-	WowLuaFrameOutput:AddMessage("|cff999999" .. out .. "|r")
+		-- out = out .. tostring(arg[i])
+	-- end
+
+	--WowLuaFrameOutput:AddMessage("|cff999999" .. out .. "|r")
+	WowLuaFrameOutput:AddMessage(inspect(arg))
 end
 
 
@@ -725,6 +727,7 @@ function WowLua:Button_Run()
 end
 
 function WowLua:Button_Config()
+	_G["WoWLuaVanillaConfigFrame"]:Show()
     --todo InterfaceOptionsFrame_OpenToCategory("WowLua")
 end
 
@@ -822,7 +825,7 @@ end
 function WowLua:ResizeBar_OnMouseDown(frame, button)
 	_, frame.cursorStart = GetCursorPosition()
 	_,_,_,_, frame.anchorStart = frame:GetPoint()
-	frame:SetScript("OnUpdate", function(...) WowLua:ResizeBar_OnUpdate(unpack(arg)) end)
+	frame:SetScript("OnUpdate", function(...) WowLua:ResizeBar_OnUpdate(this, unpack(arg)) end)
 end
 
 function WowLua:ResizeBar_OnMouseUp(frame, button)
