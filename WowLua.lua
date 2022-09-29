@@ -373,6 +373,8 @@ function WowLua:Button_OnClick(button)
         WowLua:Button_Config(button)
 	elseif operation == "Close" then
 		WowLua:Button_Close(button)
+	elseif operation == "ReloadUI" then
+		ReloadUI()
 	end
 end
 
