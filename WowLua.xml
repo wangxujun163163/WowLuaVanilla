@@ -23,7 +23,7 @@
 		</Scripts>
 	</Frame>
 
-    <Font name="WowLuaMonoFont" font="Interface\AddOns\WowLuaVanilla\fonts\VeraMono.ttf">
+    <Font name="WowLuaMonoFont" font="Interface\AddOns\WowLuaVanilla\fonts\consola.ttf">
 		<FontHeight val="14"/>
     </Font>
 
@@ -684,6 +684,7 @@
 		<Scripts>
 			<OnShow>
 				WowLua:Initialize(this)
+				WowLua_DB.formshow = true
 			</OnShow>
 			<OnHide>
 				PlaySound("igMainMenuQuit");

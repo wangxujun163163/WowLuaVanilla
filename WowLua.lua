@@ -21,19 +21,23 @@ WowLua_DB = {
 	currentPage = 1,
 	untitled = 2,
     fontSize = 14,
+	formshow = false,
 }
 
 local DB = {}
 
 local eframe = CreateFrame("Frame")
 eframe:RegisterEvent("ADDON_LOADED")
-eframe:SetScript("OnEvent", function(self, event, ...)
+eframe:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" then
         if arg1 == addon then
             if WowLua_DB.fontSize then
                 local file, height, flags = WowLuaMonoFont:GetFont()
                 WowLuaMonoFont:SetFont(file, WowLua_DB.fontSize, flags)
             end
+			if WowLua_DB.formshow then
+				SlashCmdList["WOWLUA"]()
+			end
         end
     end
 end)
@@ -100,18 +104,18 @@ function WowLua:SelectPage(id)
 end
 
 local function wowpad_print(...)
-	-- local out = ""
-	-- for i=1,table.getn(arg) do
+	local out = ""
+	for i=1,table.getn(arg) do
 		-- -- Comma seperate values
-		-- if i > 1 then
-			-- out = out .. ", "
-		-- end
+		if i > 1 then
+			out = out .. ", "
+		end
 
-		-- out = out .. tostring(arg[i])
-	-- end
+		out = out .. tostring(arg[i])
+		end
 
-	--WowLuaFrameOutput:AddMessage("|cff999999" .. out .. "|r")
-	WowLuaFrameOutput:AddMessage(inspect(arg))
+	WowLuaFrameOutput:AddMessage("|cff999999" .. out .. "|r")
+	--WowLuaFrameOutput:AddMessage(inspect(arg))
 end
 
 
@@ -193,7 +197,11 @@ PrintTable = printTable
 --if not print then
 	print = wowpad_print
 --end
-
+printT = function(...) 
+	for i=1,table.getn(arg),1 do
+		WowLuaFrameOutput:AddMessage(inspect(arg[i]))
+	end
+end
 local function processSpecialCommands(txt)
 	if txt == L.RELOAD_COMMAND then
 		ReloadUI()
@@ -691,7 +699,7 @@ function WowLua.lockedTextChanged()
 		this:SetText(entry.content)
 		WowLua.indent.indentEditbox(WowLuaFrameEditBox)
 		if pos then
-			--todo this:SetCursorPosition(pos)
+--			 WowLuaFrameEditBox:SetCursorPosition(pos)
 		end
 	end
 end
@@ -707,7 +715,7 @@ function WowLua:Button_Run()
 		local succ,err = WowLua:RunScript(text)
 		if not succ then
 			local _,_, chunkName,lineNum = string.find(err, "(%b[]):(%d+):")
-			lineNum = tonumber(lineNum)
+			lineNum = tonumber(lineNum or 0)
 			WowLua:UpdateLineNums(lineNum)
 
 			-- Highlight the text in the editor by finding the char of the line number we're on
@@ -740,7 +748,7 @@ function WowLua:Button_Close()
 		dialog.data = "Button_Close"
 		return
 	end
-	
+	WowLua_DB.formshow = false
 	HideUIPanel(WowLuaFrame)
 end
 
