@@ -22,6 +22,7 @@ L.TOOLTIPS["Next"] = { name = "Next", text = "Navigate forward one page" }
 L.TOOLTIPS["Run"] = { name = "Run", text = "Run the current script" }
 L.TOOLTIPS["Config"] = { name = "Config", text = "Open the configuration panel for WowLua" }
 L.TOOLTIPS["Close"] = { name = "Close" }
+L.TOOLTIPS["ReloadUI"] = { name = "ReloadUI", text = "Reload Interface" }
 	
 L.OPEN_MENU_TITLE = "Select a Script"
 L.SAVE_AS_TEXT = "Save %s with the following name:"

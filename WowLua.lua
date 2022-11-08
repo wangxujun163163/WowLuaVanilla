@@ -21,19 +21,23 @@ WowLua_DB = {
 	currentPage = 1,
 	untitled = 2,
     fontSize = 14,
+	formshow = false,
 }
 
 local DB = {}
 
 local eframe = CreateFrame("Frame")
 eframe:RegisterEvent("ADDON_LOADED")
-eframe:SetScript("OnEvent", function(self, event, ...)
+eframe:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" then
         if arg1 == addon then
             if WowLua_DB.fontSize then
                 local file, height, flags = WowLuaMonoFont:GetFont()
                 WowLuaMonoFont:SetFont(file, WowLua_DB.fontSize, flags)
             end
+			if WowLua_DB.formshow then
+				SlashCmdList["WOWLUA"]()
+			end
         end
     end
 end)
@@ -102,20 +106,102 @@ end
 local function wowpad_print(...)
 	local out = ""
 	for i=1,table.getn(arg) do
-		-- Comma seperate values
+		-- -- Comma seperate values
 		if i > 1 then
 			out = out .. ", "
 		end
 
 		out = out .. tostring(arg[i])
-	end
+		end
+
 	WowLuaFrameOutput:AddMessage("|cff999999" .. out .. "|r")
+	--WowLuaFrameOutput:AddMessage(inspect(arg))
 end
 
-if not print then
+
+local join = function (list, separator)
+		-- Type check
+		if ( not list or type(list) ~= "table" ) then 
+			DEFAULT_CHAT_FRAME:AddMessage("Non-table passed to join");
+			return;
+		end
+		if ( separator == nil ) then separator = ""; end
+		
+		local i;
+		local c = "";
+		local msg = "";
+		local currType;
+		for i=1,table.getn(list) do
+			v = list[i]
+				if v == nil then v = "nil" end
+				if v == true then v = "true" end
+				if v == false then v = "false" end
+				if type(v) == "function" then
+					v = "function ("..tostring(v)..")"
+				end
+				currType = type(v);
+				if( currType == "string" or currType == "number") then
+					msg = msg .. c .. v;
+				else
+					msg = msg .. c .. "(" .. tostring(v) .. ")";
+				end
+				c = separator;
+
+		end
+		return msg;		
+	end
+local printc = function(...)
+	DEFAULT_CHAT_FRAME:AddMessage("|cff999999" .. (join(arg, "") or "").."|r")
+end
+local function printTable(table,rowname,level,spacer)
+	if ( level == nil ) then level = 1; end
+	
+	if ( type(rowname) == "nil" ) then rowname = "ROOT"; 
+	elseif ( type(rowname) == "string" ) then 
+		rowname = "\""..rowname.."\"";
+	elseif ( type(rowname) ~= "number" ) then
+		rowname = "*"..type(rowname).."*";
+	end
+
+	local msg = (spacer or "");	
+	
+	if ( table == nil ) then 
+		printc(msg,"[",rowname,"] := nil "); return 
+	end
+	if ( type(table) == "table" and level > 0 ) then
+		printc (msg,rowname," = { ");
+		for k,v in table do
+			if v == nil then printc(msg,"[",rowname,"] := nil "); end
+			printTable(v,k,level-1,msg.."  ");
+		end
+		printc(msg,"}");
+	elseif (type(table) == "function" ) then 
+		printc(msg,"[",rowname,"] => {{FunctionPtr*}}");
+	elseif (type(table) == "userdata" ) then 
+		printc(msg,"[",rowname,"] => {{UserData}}");
+	elseif (type(table) == "boolean" ) then 
+		local value = "true";
+		if ( not table ) then
+			value = "false";
+		end
+		printc(msg,"[",rowname,"] => ",value);
+	else	
+		printc(msg,"[",rowname,"] => ",table);
+	end
+end
+
+WLprint = printc
+
+PrintTable = printTable
+
+--if not print then
 	print = wowpad_print
+--end
+printT = function(...) 
+	for i=1,table.getn(arg),1 do
+		WowLuaFrameOutput:AddMessage(inspect(arg[i]))
+	end
 end
-
 local function processSpecialCommands(txt)
 	if txt == L.RELOAD_COMMAND then
 		ReloadUI()
@@ -295,6 +381,8 @@ function WowLua:Button_OnClick(button)
         WowLua:Button_Config(button)
 	elseif operation == "Close" then
 		WowLua:Button_Close(button)
+	elseif operation == "ReloadUI" then
+		ReloadUI()
 	end
 end
 
@@ -524,11 +612,12 @@ StaticPopupDialogs["WOWLUA_UNSAVED"] = {
 	OnAccept = function(self)
 		local page,entry = WowLua:GetCurrentPage()
 		WowLuaFrameEditBox:SetText(entry.content)
-		local action = self:GetParent().data
+
+		local action = this:GetParent().data
 		if type(action) == "string" then
 			WowLua[action](WowLua)
 		else
-			WowLua:GoToPage(self:GetParent().data)
+			WowLua:GoToPage(this:GetParent().data)
 		end
 	end,
 	timeout = 0,
@@ -537,7 +626,7 @@ StaticPopupDialogs["WOWLUA_UNSAVED"] = {
 	showAlert = 1,
 	hideOnEscape = 1,
 	EditBoxOnEscapePressed = function(self)
-		self:GetParent():Hide();
+		this:GetParent():Hide();
 		ClearCursor();
 	end
 }
@@ -610,7 +699,7 @@ function WowLua.lockedTextChanged()
 		this:SetText(entry.content)
 		WowLua.indent.indentEditbox(WowLuaFrameEditBox)
 		if pos then
-			--todo this:SetCursorPosition(pos)
+--			 WowLuaFrameEditBox:SetCursorPosition(pos)
 		end
 	end
 end
@@ -626,7 +715,7 @@ function WowLua:Button_Run()
 		local succ,err = WowLua:RunScript(text)
 		if not succ then
 			local _,_, chunkName,lineNum = string.find(err, "(%b[]):(%d+):")
-			lineNum = tonumber(lineNum)
+			lineNum = tonumber(lineNum or 0)
 			WowLua:UpdateLineNums(lineNum)
 
 			-- Highlight the text in the editor by finding the char of the line number we're on
@@ -642,12 +731,13 @@ function WowLua:Button_Run()
 			local _, nextLine = string.find(text, "\n", start)
 			
 			WowLuaFrameEditBox:SetFocus()
-			WowLuaFrameEditBox:SetCursorPosition(start - 1)
+--			WowLuaFrameEditBox:SetCursorPosition(start - 1)
 		end
 	end
 end
 
 function WowLua:Button_Config()
+	_G["WoWLuaVanillaConfigFrame"]:Show()
     --todo InterfaceOptionsFrame_OpenToCategory("WowLua")
 end
 
@@ -658,7 +748,7 @@ function WowLua:Button_Close()
 		dialog.data = "Button_Close"
 		return
 	end
-	
+	WowLua_DB.formshow = false
 	HideUIPanel(WowLuaFrame)
 end
 
@@ -745,7 +835,7 @@ end
 function WowLua:ResizeBar_OnMouseDown(frame, button)
 	_, frame.cursorStart = GetCursorPosition()
 	_,_,_,_, frame.anchorStart = frame:GetPoint()
-	frame:SetScript("OnUpdate", function(...) WowLua:ResizeBar_OnUpdate(unpack(arg)) end)
+	frame:SetScript("OnUpdate", function(...) WowLua:ResizeBar_OnUpdate(this, unpack(arg)) end)
 end
 
 function WowLua:ResizeBar_OnMouseUp(frame, button)
@@ -938,7 +1028,7 @@ SlashCmdList["WOWLUA"] = function(txt)
 		return
 	end
 
-	if string.find(txt, "%S") then
+	if txt and string.find(txt, "%S") then
 		WowLua:ProcessLine(txt)
 	end
 
