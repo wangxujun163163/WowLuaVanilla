@@ -463,7 +463,7 @@ function WowLua:OpenDropDownOnLoad(frame)
 	UIDropDownMenu_Initialize(frame, self.OpenDropDownInitialize)
 end
 
-local function dropDownFunc(button, page)
+local function dropDownFunc(page)
 	WowLua:GoToPage(page)
 end
 
@@ -486,10 +486,8 @@ StaticPopupDialogs["WOWLUA_SAVE_AS"] = {
 	text = L.SAVE_AS_TEXT,
 	button1 = TEXT(OKAY),
 	button2 = TEXT(CANCEL),
-	OnAccept = function()		
-		local name = this:GetName().."EditBox"
-		local button = _G[name]
-		local text = button:GetText()
+	OnAccept = function()
+		local text = _G[this:GetParent():GetName().."EditBox"]:GetText()
 		WowLua:RenamePage(WowLua.save_as, text)
 		WowLua:SetTitle()
 	end,
